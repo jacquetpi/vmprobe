@@ -100,6 +100,17 @@ namespace server {
                 path << "/sys/devices/system/cpu/cpu" << i << "/cpufreq/scaling_cur_freq";
                 this-> _cpuPath.push_back (path.str ());
             }
+            std::ifstream f0 ("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+            std::stringstream buffer;
+            buffer << f0.rdbuf();
+            buffer >> _maxFreqCPU;
+            f0.close();
+            buffer.str("");
+            buffer.clear();
+            std::ifstream f1 ("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq");
+            buffer << f1.rdbuf();
+            buffer >> _minFreqCPU;
+            f1.close();
 	    }
 
         long long sum = 0;
@@ -107,7 +118,6 @@ namespace server {
 	    for (int i = 0 ; i < this-> _numCPU; i++) {
             std::ifstream f (this-> _cpuPath[i]);
             std::stringstream buffer;
-            std::string res;
             buffer << f.rdbuf();
             buffer >> freq;
             f.close();
@@ -150,8 +160,16 @@ namespace server {
         dump->addGlobalMetric("memory_available", memAvailable);
     }
 
-    const int PerfClient::getVCPUs () {
+    const int PerfClient::getVCPUs() {
         return _numCPU;
+    }
+
+    const int PerfClient::getMaxFreq() {
+        return _maxFreqCPU;
+    }
+
+    const int PerfClient::getMinFreq() {
+        return _minFreqCPU;
     }
 
 }

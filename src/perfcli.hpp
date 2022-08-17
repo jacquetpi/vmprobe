@@ -19,6 +19,8 @@ namespace server {
 		private:
 		
         int _numCPU;
+		int _minFreqCPU;
+		int _maxFreqCPU;
 		int *_fdsInstructions; //file descriptors for instructions
 		int *_fdsCycles; //file descriptors for instructions
 
@@ -54,6 +56,10 @@ namespace server {
 		const void addHostMemoryUsage(Dump* dump);
 
 		const int getVCPUs();
+
+		const int getMinFreq();
+
+		const int getMaxFreq();
     };
 
 }

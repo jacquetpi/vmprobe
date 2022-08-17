@@ -7,7 +7,7 @@ namespace server {
 
     Dump::Dump(std::string prefix, std::string file) : _prefix(prefix), _file(file) {};
 
-    void Dump::dump(){      
+    void Dump::dump(){
       std::ofstream stream(_file);
       for(auto& kv : _map) {
          stream << kv.first << " " << kv.second <<"\n"; 
@@ -40,6 +40,10 @@ namespace server {
    }
 
    void Dump::addSpecificMetric(std::string identifier, std::string key, unsigned short value){
+      this-> addSpecificMetric(identifier, key, std::to_string(value));
+   }
+
+   void Dump::addSpecificMetric(std::string identifier, std::string key, int value){
       this-> addSpecificMetric(identifier, key, std::to_string(value));
    }
 

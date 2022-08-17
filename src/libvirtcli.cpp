@@ -54,14 +54,14 @@ namespace server {
             virDomainPtr dom = domains [i];
             addDomainCPUMetrics(dump, dom);
             addDomainMemoryMetrics(dump, dom);
-            //togglePerfEvents(dom, true);
-            addDomainPerfInfo(dump, dom);
+            togglePerfEvents(dom, true);
             virDomainFree(dom);
         }
+        addDomainsPerfInfo(dump);
         free (domains);
     }
 
-    void LibvirtClient::addDomainMemoryMetrics(Dump* dump, virDomainPtr dom) const {    
+    void LibvirtClient::addDomainMemoryMetrics(Dump* dump, virDomainPtr dom) {    
         std::string name = virDomainGetName (dom);
         virDomainMemoryStatPtr minfo =  (virDomainMemoryStatPtr) calloc(VIR_DOMAIN_MEMORY_STAT_NR, sizeof(*minfo));
         if (minfo == NULL) {
@@ -90,7 +90,7 @@ namespace server {
                     dump->addSpecificMetric(name, "memory_available", minfo[i].val);
                     break;
                 case VIR_DOMAIN_MEMORY_STAT_ACTUAL_BALLOON:
-                    dump->addSpecificMetric(name, "memory_actual", minfo[i].val);
+                    dump->addSpecificMetric(name, "memory_alloc", minfo[i].val);
                     break;
                 case VIR_DOMAIN_MEMORY_STAT_RSS:
                     dump->addSpecificMetric(name, "memory_rss", minfo[i].val);
@@ -114,7 +114,7 @@ namespace server {
         }
     }
 
-    void LibvirtClient::addNodeMemoryMetrics(Dump* dump) const {
+    void LibvirtClient::addNodeMemoryMetrics(Dump* dump) {
         int nparams = 0;
         virNodeMemoryStatsPtr params;
         // Retrieve dynamic nparams value : https://libvirt.org/html/libvirt-libvirt-host.html#virNodeGetMemoryStats
@@ -148,8 +148,9 @@ namespace server {
         }
     }
 
-    void LibvirtClient::addDomainCPUMetrics(Dump* dump, virDomainPtr dom) const {
+    void LibvirtClient::addDomainCPUMetrics(Dump* dump, virDomainPtr dom) {
         std::string name = virDomainGetName (dom);
+        dump->addSpecificMetric(name, "cpu_alloc", virDomainGetMaxVcpus(dom));
         int nparams = virDomainGetCPUStats(dom, NULL, 0, -1, 1, 0);
         if (nparams <= 0) {
             utils::logging::info ("LibvirtClient::get_domain_cpu_stats failed (invalid nparams) domain probably died:", this-> _uri, name);
@@ -183,7 +184,7 @@ namespace server {
     }
 
     // Check src/util/virperf.h
-    void LibvirtClient::togglePerfEvents(virDomainPtr domain, bool status){
+    void LibvirtClient::togglePerfEvents(virDomainPtr domain, bool status) {
         unsigned int flags = VIR_DOMAIN_AFFECT_CURRENT;
         flags |= VIR_DOMAIN_AFFECT_LIVE;
         int nparams = 0;
@@ -214,31 +215,36 @@ namespace server {
         virTypedParamsFree(params, nparams);
     }
 
-    void LibvirtClient::addDomainPerfInfo(Dump* dump, virDomainPtr domain){
+    void LibvirtClient::addDomainsPerfInfo(Dump* dump) {
         int flags = 0;
         unsigned int stats = 0;
         stats |= VIR_DOMAIN_STATS_PERF;
+        virDomainStatsRecordPtr *next;
         virDomainStatsRecordPtr *records = NULL;
-        if (virDomainListGetStats(&domain, stats, &records, flags) < 0){
-            utils::logging::error ("LibvirtClient::virDomainListGetStats failed rc");
+        if ((virConnectGetAllDomainStats(this->_conn, stats, &records, flags)) < 0){
+            utils::logging::error ("LibvirtClient::addDomainsPerfInfo virConnectGetAllDomainStats failed rc");
             return;
         }
-        std::string name = virDomainGetName ((*records)->dom);
-        for (int i = 0; i < (*records)->nparams; i++) {
-            if((*records)->params[i].type != VIR_TYPED_PARAM_ULLONG){
-                utils::logging::error ("LibvirtClient::addDomainPerfInfo failed (type error):", this-> _uri, (*records)->params[i].field);
-                continue;
+
+        next = records;
+        while (*next) {
+            std::string name = virDomainGetName((*next)->dom);
+            for (int i = 0; i < (*next)->nparams; i++) {
+                if((*next)->params[i].type != VIR_TYPED_PARAM_ULLONG){
+                    utils::logging::error ("LibvirtClient::addDomainPerfInfo failed (type error):", this-> _uri, (*next)->params[i].field);
+                    continue;
+                }
+                std::string field = (*next)->params[i].field;
+                field.erase(remove(field.begin(), field.end(), '_'), field.end());
+                std::replace(field.begin(), field.end(), '.', '_');
+                dump->addSpecificMetric(name, field, (*next)->params[i].value.ul);
             }
-            std::string field = (*records)->params[i].field;
-            field.erase(remove(field.begin(), field.end(), '_'), field.end());
-            std::replace(field.begin(), field.end(), '.', '_');
-            // utils::logging::info ("LibvirtClient::virDomainListGetStats", field, (*records)->params[i].value.ul);
-            dump->addSpecificMetric(name, field, (*records)->params[i].value.ul);
+            ++next;
         }
         virDomainStatsRecordListFree(records);
     }
 
-    void LibvirtClient::addNodeCPUMetrics(Dump* dump) const{
+    void LibvirtClient::addNodeCPUMetrics(Dump* dump) {
         // Dynamic nparams https://libvirt.org/html/libvirt-libvirt-host.html#virNodeGetCPUStats
         int nparams = 0;
         virNodeCPUStatsPtr params;

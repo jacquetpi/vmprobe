@@ -60,15 +60,15 @@ namespace server {
 	     */	    
 	    void addAllDomainsMetrics(Dump* dump);
 
-		void addDomainInfo(Dump* dump, virDomainPtr dom) const;
+		void addDomainInfo(Dump* dump, virDomainPtr dom) ;
 
-		void addDomainMemoryMetrics(Dump* dump, virDomainPtr domain) const;
+		void addDomainMemoryMetrics(Dump* dump, virDomainPtr domain) ;
 
-		void addDomainCPUMetrics(Dump* dump, virDomainPtr domain) const;
+		void addDomainCPUMetrics(Dump* dump, virDomainPtr domain) ;
 
-		void togglePerfEvents(virDomainPtr domain, bool status);
+		void togglePerfEvents(virDomainPtr domain, bool status) ;
 
-		void addDomainPerfInfo(Dump* dump, virDomainPtr domain);
+		void addDomainsPerfInfo(Dump* dump) ;
 
 		/**
          * ================================================================================
@@ -78,9 +78,9 @@ namespace server {
          * ================================================================================
          */
 
-		void addNodeMemoryMetrics(Dump* dump) const;
+		void addNodeMemoryMetrics(Dump* dump) ;
 
-		void addNodeCPUMetrics(Dump* dump) const;
+		void addNodeCPUMetrics(Dump* dump) ;
 
 	};
 }

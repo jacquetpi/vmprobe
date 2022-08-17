@@ -1,5 +1,5 @@
 # VMProbe
 prefix=test
-delay=5
+delay=5000
 endpoint=/var/lib/node_exporter/textfile_collector/vms.prom
 url=qemu:///system

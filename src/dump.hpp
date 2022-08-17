@@ -36,6 +36,8 @@ namespace server {
 
         void addSpecificMetric(std::string identifier, std::string key, unsigned short value);
 
+        void addSpecificMetric(std::string identifier, std::string key, int value);
+
         void addSpecificMetric(std::string identifier, std::string key, long long value);
 
         void addSpecificMetric(std::string identifier, std::string key, unsigned long value);

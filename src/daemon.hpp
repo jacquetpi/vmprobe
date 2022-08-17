@@ -41,5 +41,4 @@ namespace server {
 			void kill ();
 	
     };
-
 }
