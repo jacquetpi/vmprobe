@@ -16,8 +16,8 @@ namespace server {
 
     void Daemon::start () {
         this-> _libvirt->connect ();
-        this-> _perfcli->perf_init();
-        this-> _perfcli->perf_enable();
+        this-> _perfcli->perfInit();
+        this-> _perfcli->perfEnable();
         long long epochBegin;
         long long epochEnd;
         while(true){
@@ -41,10 +41,8 @@ namespace server {
     inline void Daemon::retrievePerfMetrics(){
         long long instructions;
         long long cycles;
-        _perfcli->perf_read_cpi(&instructions, &cycles);
-        _perfcli->perf_reset();
-        _dump->addGlobalMetric("cpu_instructions", instructions);
-        _dump->addGlobalMetric("cpu_cycles", cycles);
+        _perfcli->perfReadCounters(_dump);
+        _perfcli->perfReset();
         _dump->addGlobalMetric("cpu_freq", _perfcli->readCPUFrequency());
         _dump->addGlobalMetric("cpu_minfreq", _perfcli->getMinFreq());
         _dump->addGlobalMetric("cpu_maxfreq", _perfcli->getMaxFreq());
@@ -59,7 +57,7 @@ namespace server {
 
     void Daemon::kill () {
         this-> _libvirt->disconnect ();
-        this-> _perfcli->perf_close();
+        this-> _perfcli->perfClose();
         free(_libvirt);
         free(_perfcli);
     }

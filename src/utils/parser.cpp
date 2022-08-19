@@ -32,14 +32,34 @@ namespace utils {
 					utils::Config::Get().endpoint = value;
 				}else if(name == "url"){
 					utils::Config::Get().url = value;
+				}else if(name == "perfhardware"){
+					utils::Config::Get().perfEventHardware = convertToList(value);
+				}else if(name == "perfhardwarecache"){
+					utils::Config::Get().perfEventHardwareCache = convertToList(value);
+				}else if(name == "perfsoftware"){
+					utils::Config::Get().perfEventSoftware = convertToList(value);
 				}else{
 					utils::logging::error ("Config parser, unknown option", name);
 				}
-
 			}
 		}
 		else {
 			utils::logging::error ("Failed to open config file:", _configfile);
 		}
+	}
+
+	std::list<std::string> Parser::convertToList(std::string value){
+		size_t pos = 0;
+		std::string token;
+		std::list<std::string> list;
+		while ((pos = value.find(',')) != std::string::npos) {
+    		token = value.substr(0, pos);
+			if(!token.empty())
+				list.push_back(token);
+    		value.erase(0, pos + 1);
+		}
+		if(!value.empty())
+			list.push_back(value);
+		return list;
 	}
 }

@@ -3,3 +3,6 @@ prefix=test
 delay=5000
 endpoint=/var/lib/node_exporter/textfile_collector/vms.prom
 url=qemu:///system
+perfhardware=PERF_COUNT_HW_CPU_CYCLES,PERF_COUNT_HW_INSTRUCTIONS,PERF_COUNT_HW_CACHE_REFERENCES
+perfsoftware=
+perfhardwarecache=

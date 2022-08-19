@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <bits/stdc++.h>
 
 namespace utils {
 	
@@ -18,6 +19,9 @@ namespace utils {
 		int delay;
 		std::string endpoint;
 		std::string url;
+		std::list<std::string> perfEventHardware;
+		std::list<std::string> perfEventSoftware;
+		std::list<std::string> perfEventHardwareCache;
 	};
 
 }
