@@ -80,9 +80,9 @@ namespace server {
         pe.size = sizeof(pe);
         pe.config = event;
         pe.disabled = 1;
-		pe.exclude_user = 0,
-		pe.exclude_kernel = 0,
-		pe.exclude_hv = 0,
+		pe.exclude_user = 0;
+		pe.exclude_kernel = 0;
+		pe.exclude_hv = 0;
 		pe.exclude_idle = 0;
 
         fd = perfEventOpen(&pe, -1, cpu, -1, PERF_FLAG_FD_CLOEXEC);
