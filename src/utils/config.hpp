@@ -22,6 +22,7 @@ namespace utils {
 		std::list<std::string> perfEventHardware;
 		std::list<std::string> perfEventSoftware;
 		std::list<std::string> perfEventHardwareCache;
+		int countersPerCore;
 	};
 
 }

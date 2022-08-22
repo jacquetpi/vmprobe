@@ -201,10 +201,6 @@ namespace server {
         // Cache miss
         virTypedParamsAddBoolean(&params, &nparams, &maxparams, VIR_PERF_PARAM_CACHE_MISSES, status);
         virTypedParamsAddBoolean(&params, &nparams, &maxparams, VIR_PERF_PARAM_CACHE_REFERENCES, status);
-        // L1DLM L1 data cache load misses : Not available
-        // LLCLM last level cache load misses : Not available
-        // dTLBLM:  translation look-aside buffer : Not available
-        // iTLBLM : Instruction Translation Look-aside Buffer : Not available
         virTypedParamsAddBoolean(&params, &nparams, &maxparams, VIR_PERF_PARAM_PAGE_FAULTS, status);
         virTypedParamsAddBoolean(&params, &nparams, &maxparams, VIR_PERF_PARAM_ALIGNMENT_FAULTS, status);
         virTypedParamsAddBoolean(&params, &nparams, &maxparams, VIR_PERF_PARAM_EMULATION_FAULTS, status);

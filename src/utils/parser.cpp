@@ -38,6 +38,8 @@ namespace utils {
 					utils::Config::Get().perfEventHardwareCache = convertToList(value);
 				}else if(name == "perfsoftware"){
 					utils::Config::Get().perfEventSoftware = convertToList(value);
+				}else if(name == "counterspercore"){
+					utils::Config::Get().countersPerCore = std::stoi(value);
 				}else{
 					utils::logging::error ("Config parser, unknown option", name);
 				}

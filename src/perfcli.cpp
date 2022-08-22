@@ -14,16 +14,21 @@ namespace server {
     }
 
     void PerfClient::perfInit () {
-        for(int i=0;i<_numCPU;i++){
-            for(const auto& event : utils::Config::Get().perfEventHardware){
-                _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HARDWARE, perfHwId.find(event)->second));
+        if (utils::Config::Get().countersPerCore == 0)
+            for(int i=0;i<_numCPU;i++){
+                for(const auto& event : utils::Config::Get().perfEventHardware){
+                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HARDWARE, perfHwId.find(event)->second));
+                }
+                for(const auto& event : utils::Config::Get().perfEventHardwareCache){
+                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HW_CACHE, perfHwCacheId.find(event)->second));
+                }
+                for(const auto& event : utils::Config::Get().perfEventSoftware){
+                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_SOFTWARE, perfSwId.find(event)->second));
+                }
             }
-            for(const auto& event : utils::Config::Get().perfEventHardwareCache){
-                _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HW_CACHE, perfHwCacheId.find(event)->second));
-            }
-            for(const auto& event : utils::Config::Get().perfEventSoftware){
-                 _fdCounters[event].push_back(fdStart(i, PERF_TYPE_SOFTWARE, perfSwId.find(event)->second));
-            }
+        else{
+            int nbEvents = utils::Config::Get().perfEventHardware.size() + utils::Config::Get().perfEventHardwareCache.size() + utils::Config::Get().perfEventSoftware.size();
+            utils::logging::info(nbEvents, " events à repartir");
         }
         utils::logging::success("Perf counters initalized");
     }
@@ -82,7 +87,7 @@ namespace server {
 
         fd = perfEventOpen(&pe, -1, cpu, -1, PERF_FLAG_FD_CLOEXEC);
         if (fd == -1) {
-            utils::logging::error ("PerfClient::fdStart Failed to initialize a counter :", event);
+            utils::logging::error ("PerfClient::fdStart Failed to initialize a counter, eventtype", type, "eventcode", event, "on core", cpu);
             throw ProbeError("PerfClient::fdStart failed\n");
         }
 
