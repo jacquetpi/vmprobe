@@ -5,30 +5,37 @@
 #include "utils/config.hpp"
 #include "error.hpp"
 #include <limits>
+#include <sys/resource.h>
 
 namespace server {
 
     PerfClient::PerfClient(){
         _numCPU = sysconf(_SC_NPROCESSORS_ONLN);
         utils::logging::info(_numCPU, "cpu(s) found");
+        rlimit rl;
+	    getrlimit(RLIMIT_NOFILE, &rl);
+        utils::logging::info("Soft nofile limit is", rl.rlim_cur);
+        utils::logging::info("Hard nofile limit is", rl.rlim_max);
+        if(rl.rlim_cur < rl.rlim_max){
+            rl.rlim_cur = rl.rlim_max;
+            if(setrlimit(RLIMIT_NOFILE, &rl) == 0)
+                utils::logging::info("New nofile limit is", rl.rlim_cur);
+            else
+                utils::logging::error("Error: nofile limit couldn't be set:", strerror(errno));
+        }
     }
 
     void PerfClient::perfInit () {
-        if (utils::Config::Get().countersPerCore == 0)
-            for(int i=0;i<_numCPU;i++){
-                for(const auto& event : utils::Config::Get().perfEventHardware){
-                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HARDWARE, perfHwId.find(event)->second));
-                }
-                for(const auto& event : utils::Config::Get().perfEventHardwareCache){
-                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HW_CACHE, perfHwCacheId.find(event)->second));
-                }
-                for(const auto& event : utils::Config::Get().perfEventSoftware){
-                    _fdCounters[event].push_back(fdStart(i, PERF_TYPE_SOFTWARE, perfSwId.find(event)->second));
-                }
+        for(int i=0;i<_numCPU;i++){
+            for(const auto& event : utils::Config::Get().perfEventHardware){
+                _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HARDWARE, perfHwId.find(event)->second));
             }
-        else{
-            int nbEvents = utils::Config::Get().perfEventHardware.size() + utils::Config::Get().perfEventHardwareCache.size() + utils::Config::Get().perfEventSoftware.size();
-            utils::logging::info(nbEvents, " events à repartir");
+            for(const auto& event : utils::Config::Get().perfEventHardwareCache){
+                _fdCounters[event].push_back(fdStart(i, PERF_TYPE_HW_CACHE, perfHwCacheId.find(event)->second));
+            }
+            for(const auto& event : utils::Config::Get().perfEventSoftware){
+                _fdCounters[event].push_back(fdStart(i, PERF_TYPE_SOFTWARE, perfSwId.find(event)->second));
+            }
         }
         utils::logging::success("Perf counters initalized");
     }
@@ -80,7 +87,7 @@ namespace server {
         pe.size = sizeof(pe);
         pe.config = event;
         pe.disabled = 1;
-		pe.exclude_user = 0;
+	    pe.exclude_user = 0;
 		pe.exclude_kernel = 0;
 		pe.exclude_hv = 0;
 		pe.exclude_idle = 0;
@@ -88,6 +95,7 @@ namespace server {
         fd = perfEventOpen(&pe, -1, cpu, -1, PERF_FLAG_FD_CLOEXEC);
         if (fd == -1) {
             utils::logging::error ("PerfClient::fdStart Failed to initialize a counter, eventtype", type, "eventcode", event, "on core", cpu);
+            utils::logging::error ("Errno", strerror(errno));
             throw ProbeError("PerfClient::fdStart failed\n");
         }
 
