@@ -41,7 +41,7 @@ namespace server {
     inline void Daemon::retrievePerfMetrics(){
         long long instructions;
         long long cycles;
-        _perfcli->perfReadCounters(_dump);
+        _perfcli->perfRead(_dump);
         _perfcli->perfReset();
         _dump->addGlobalMetric("cpu_freq", _perfcli->readCPUFrequency());
         _dump->addGlobalMetric("cpu_minfreq", _perfcli->getMinFreq());

@@ -61,17 +61,35 @@ namespace server {
 		int _minFreqCPU;
 		int _maxFreqCPU;
 		
-		std::unordered_map<std::string ,std::vector<int> > _fdCounters;
+		std::unordered_map<std::string, std::vector<int> > _fdGlobalCounters;
+		std::unordered_map<std::string, std::unordered_map<std::string ,std::vector<int> >> _fdVMCounters;
+		std::unordered_map<std::string, int> _fdVmCgroup;
 
 	    std::vector <std::string> _cpuPath;
 
-		int fdStart(int cpu, perf_type_id type, int event);
+		int fdStart(int pid, int cpu, int perf_flags, perf_type_id type, int event);
 
 		const long long fdRead(int fd);
 
 		void fdClose(int fd);
 
 		long perfEventOpen(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd, unsigned long flags);
+
+		void perfRefreshVMs();
+
+		void perfInitVM(std::string vmName, std::string vmCgroupPath);
+
+		void perfEnableSpecific(std::unordered_map<std::string ,std::vector<int> >* fdMap);
+
+		void perfResetSpecific(std::unordered_map<std::string ,std::vector<int> >* fdMap);
+
+		void perfCloseSpecific(std::unordered_map<std::string ,std::vector<int> >* fdMap);
+
+		void perfReadSpecific(std::string qualifier, std::unordered_map<std::string ,std::vector<int> >* fdMap, Dump* dump);
+
+		void perfSetCounters(std::unordered_map<std::string ,std::vector<int> >* fdMap, int pid, int flag);
+
+		std::unordered_map<std::string, std::string> retrieveCgroupsVM();
 
 		public: 
 		
@@ -86,7 +104,7 @@ namespace server {
 
 		void perfReset();
 
-		void perfReadCounters(Dump* dump);
+		void perfRead(Dump* dump);
 
 		void perfClose();
 

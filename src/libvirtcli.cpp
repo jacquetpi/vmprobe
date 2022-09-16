@@ -54,10 +54,8 @@ namespace server {
             virDomainPtr dom = domains [i];
             addDomainCPUMetrics(dump, dom);
             addDomainMemoryMetrics(dump, dom);
-            togglePerfEvents(dom, true);
             virDomainFree(dom);
         }
-        addDomainsPerfInfo(dump);
         free (domains);
     }
 
@@ -218,7 +216,7 @@ namespace server {
         virDomainStatsRecordPtr *next;
         virDomainStatsRecordPtr *records = NULL;
         if ((virConnectGetAllDomainStats(this->_conn, stats, &records, flags)) < 0){
-            utils::logging::error ("LibvirtClient::addDomainsPerfInfo virConnectGetAllDomainStats failed rc");
+            utils::logging::warn ("LibvirtClient::addDomainsPerfInfo virConnectGetAllDomainStats failed rc");
             return;
         }
 
