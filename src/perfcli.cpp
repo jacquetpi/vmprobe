@@ -21,8 +21,7 @@ namespace server {
         utils::logging::info(_numCPU, "cpu(s) found");
         rlimit rl;
 	    getrlimit(RLIMIT_NOFILE, &rl);
-        utils::logging::info("Soft nofile limit is", rl.rlim_cur);
-        utils::logging::info("Hard nofile limit is", rl.rlim_max);
+        utils::logging::info("Soft/Hard nofile limit are", rl.rlim_cur, "/", rl.rlim_max);
         if(rl.rlim_cur < rl.rlim_max){
             rl.rlim_cur = rl.rlim_max;
             if(setrlimit(RLIMIT_NOFILE, &rl) == 0)
@@ -49,6 +48,9 @@ namespace server {
             for(const auto& event : utils::Config::Get().perfEventSoftware){
                 (*fdMap)[event].push_back(fdStart(pid, i, flag, PERF_TYPE_SOFTWARE, perfSwId.find(event)->second));
             }
+            for(const auto& event : utils::Config::Get().perfEventTracepoint){
+                (*fdMap)[event].push_back(fdStart(pid, i, flag, PERF_TYPE_TRACEPOINT, std::stoi(event)));
+            }
         }
     }
 
@@ -65,12 +67,12 @@ namespace server {
             if (cgroups.find(x.first) == cgroups.end()){
                 perfCloseSpecific(&x.second);
                 toBeDeleted.push_back(x.first);
-                utils::logging::info("VM", x.first, "is no longer active, counters cleared");
             }
         for(auto x : toBeDeleted){
             _fdVMCounters.erase(x);
             close(_fdVmCgroup[x]);
             _fdVmCgroup.erase(x);
+            utils::logging::info("VM", x, "is no longer active, counters cleared");
         }
     }
 
@@ -155,8 +157,10 @@ namespace server {
             for(int i=0;i<_numCPU;i++){
                 value+= fdRead(it.second.at(i));
             }
-            key.erase(0,11); // remove PERF_COUNT_
-            key.erase(remove(key.begin(), key.end(), '_'), key.end());
+            if(!is_number(key)){
+                key.erase(0,11); // remove PERF_COUNT_
+                key.erase(remove(key.begin(), key.end(), '_'), key.end());
+            }
             if(qualifier.empty())
                 dump->addGlobalMetric("perf_" + to_lower(key), value);
             else
@@ -194,7 +198,15 @@ namespace server {
 		pe.exclude_hv = 0;
 		pe.exclude_idle = 0;
 
-        fd = perfEventOpen(&pe, pid, cpu, -1, perf_flags);
+        try
+        {
+            fd = perfEventOpen(&pe, pid, cpu, -1, perf_flags);
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << "Exception caught : " << e.what() << std::endl;
+        }
+        
         if (fd == -1) {
             utils::logging::error ("PerfClient::fdStart Failed to initialize a counter, eventtype", type, "eventcode", event, "on core", cpu);
             utils::logging::error ("Errno", strerror(errno));
