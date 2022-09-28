@@ -10,6 +10,7 @@
 #include "dump.hpp"
 #include <unordered_map>
 #include <bits/stdc++.h>
+#include <tuple>
 
 namespace server {
 	/**
@@ -61,9 +62,9 @@ namespace server {
 		int _minFreqCPU;
 		int _maxFreqCPU;
 		
-		std::unordered_map<std::string, std::vector<int> > _fdGlobalCounters;
-		std::unordered_map<std::string, std::unordered_map<std::string ,std::vector<int> >> _fdVMCounters;
-		std::unordered_map<std::string, int> _fdVmCgroup;
+		std::unordered_map<std::string, std::vector<int> > _fdGlobalCounters; // id = event_name
+		std::unordered_map<std::string, std::unordered_map<std::string ,std::vector<int> >> _fdVMCounters; // id=vmname
+		std::unordered_map<std::string, std::tuple<int, std::string>> _fdVmCgroup; // id : vmname = tuple<fd, procfspath>
 
 	    std::vector <std::string> _cpuPath;
 
@@ -107,6 +108,16 @@ namespace server {
 		void perfRead(Dump* dump);
 
 		void perfClose();
+
+		void readSchedStat(Dump* dump);
+
+		void readVmSchedStat(Dump* dump);
+
+		void readNodeSchedStat(Dump* dump);
+
+		void readVmSchedStatSpecific(Dump* dump, std::string vmname, std::string vmcgroupfs);
+
+		void readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime);
 
 		const long long readCPUFrequency();
 

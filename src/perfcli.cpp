@@ -70,23 +70,23 @@ namespace server {
             }
         for(auto x : toBeDeleted){
             _fdVMCounters.erase(x);
-            close(_fdVmCgroup[x]);
+            close(std::get<0>(_fdVmCgroup[x]));
             _fdVmCgroup.erase(x);
             utils::logging::info("VM", x, "is no longer active, counters cleared");
         }
     }
 
-    void PerfClient::perfInitVM(std::string vmName, std::string vmCgroupPath) {
+    void PerfClient::perfInitVM(std::string vmname, std::string vmCgroupPath) {
         int perf_flags = 0;
         perf_flags |= PERF_FLAG_PID_CGROUP;
         errno = 0;
         int cgroup_fd = open(vmCgroupPath.c_str(), O_RDONLY); 
         if (cgroup_fd < 1) {
-            utils::logging::error("cannot open cgroup dir path=", vmCgroupPath, "for vm", vmName, "errno=", errno);
+            utils::logging::error("cannot open cgroup dir path=", vmCgroupPath, "for vm", vmname, "errno=", errno);
             return;
         }
-        perfSetCounters(&_fdVMCounters[vmName], cgroup_fd, perf_flags);
-        _fdVmCgroup[vmName] = cgroup_fd; // Keep track of fd to properly close them
+        perfSetCounters(&_fdVMCounters[vmname], cgroup_fd, perf_flags);
+        _fdVmCgroup[vmname] = std::make_tuple(cgroup_fd, vmCgroupPath); // Keep track of fd (to properly close them) and procfs
     }
 
     std::unordered_map<std::string, std::string>  PerfClient::retrieveCgroupsVM () {
@@ -105,14 +105,14 @@ namespace server {
             * The cgroup subsystems does not support hard links, so this will always work.
             */
             if (node->fts_info == FTS_D && node->fts_statp->st_nlink == 2) {
-                std::string vmName(node->fts_path);
-                size_t found = vmName.find_last_of('\\');
+                std::string vmname(node->fts_path);
+                size_t found = vmname.find_last_of('\\');
                 if (found != std::string::npos) {
-                    vmName.erase(0,found+4); // format is /sys/fs/cgroup/perf_event/machine.slice/machine-qemu\x2d2\x2dbaseline.scope
-                    found = vmName.find_last_of('.');
+                    vmname.erase(0,found+4); // format is /sys/fs/cgroup/perf_event/machine.slice/machine-qemu\x2d2\x2dbaseline.scope
+                    found = vmname.find_last_of('.');
                     if (found != std::string::npos) // remove .scope
-                        vmName.erase(found);
-                    vmCgroups[vmName] = node->fts_path;
+                        vmname.erase(found);
+                    vmCgroups[vmname] = node->fts_path;
                 } // else : not a VM, probably a podman container
             }
         }
@@ -172,7 +172,7 @@ namespace server {
         perfResetSpecific(&_fdGlobalCounters);
         for(auto& x : _fdVMCounters){
             perfResetSpecific(&x.second);
-            close(_fdVmCgroup[x.first]);
+            close(std::get<0>(_fdVmCgroup[x.first]));
             _fdVmCgroup.erase(x.first);
         }
         utils::logging::info("Perf counters closed");
@@ -230,6 +230,69 @@ namespace server {
         int ret;
         ret = syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
         return ret;
+    }
+
+    void PerfClient::readSchedStat(Dump* dump){
+        readNodeSchedStat(dump);
+        readVmSchedStat(dump);
+    }
+
+    void PerfClient::readVmSchedStat(Dump* dump){
+        for(auto x : _fdVMCounters)
+            readVmSchedStatSpecific(dump, x.first, std::get<1>(_fdVmCgroup[x.first]));
+    }
+
+    void PerfClient::readNodeSchedStat(Dump* dump){
+        std::ifstream schedstat ("/proc/schedstat");
+        std::string schedstatline;
+        unsigned long long runtime = 0;
+        unsigned long long waittime = 0;
+        while (std::getline(schedstat, schedstatline))
+            if (schedstatline.rfind("cpu", 0) == 0) // filter lines
+                readSchedStatLine(schedstatline, &runtime, &waittime);
+        dump->addGlobalMetric("sched_runtime", runtime);
+        dump->addGlobalMetric("sched_waittime", waittime);
+    }
+
+    void PerfClient::readVmSchedStatSpecific(Dump* dump, std::string vmname, std::string vmCgroupFs){
+        std::ifstream cgroupfile (vmCgroupFs + "/cgroup.procs");
+        std::string strpid;
+        unsigned long long runtime = 0;
+        unsigned long long waittime = 0;
+        std::string schedstatline;
+        while (std::getline(cgroupfile, strpid)){
+            std::ifstream  schedstat ("/proc/" + strpid + "/schedstat");
+            if(std::getline(schedstat, schedstatline)){
+                readSchedStatLine(schedstatline, &runtime, &waittime);
+            }
+            schedstat.close();
+        }
+        cgroupfile.close();
+        dump->addSpecificMetric(vmname, "sched_runtime", runtime);
+        dump->addSpecificMetric(vmname, "sched_waittime", waittime);
+    }
+
+    void PerfClient::readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime){
+        //format is "... <timerun> <timewait> <timslicesrun>"
+        std::size_t foundts = schedstatline.find_last_of(" ");
+        long long waittimefound = 0;
+        long long runttimefound = 0;
+        if(foundts != std::string::npos){
+            std::string linewithoutts = schedstatline.substr(0,foundts);
+            std::size_t foundtw = linewithoutts.find_last_of(" ");
+            if(foundtw != std::string::npos){
+                waittimefound = std::stol(linewithoutts.substr(foundtw+1));
+                std::string linewithoutwt = linewithoutts.substr(0,foundtw);
+                std::size_t foundtr = linewithoutwt.find_last_of(" ");
+                if(foundtr != std::string::npos)
+                    runttimefound = std::stol(linewithoutwt.substr(foundtr+1));
+                else
+                    runttimefound = std::stol(linewithoutwt); 
+            }
+        }
+        //utils::logging::info("debug3", schedstatline, ":", runttimefound, waittimefound);
+        *runtime+=runttimefound;
+        *waittime+=waittimefound;
     }
 
     const long long PerfClient::readCPUFrequency () {

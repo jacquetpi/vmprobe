@@ -48,6 +48,7 @@ namespace server {
         _dump->addGlobalMetric("cpu_maxfreq", _perfcli->getMaxFreq());
         _dump->addGlobalMetric("cpu_total", _perfcli->getVCPUs());
         _perfcli->addHostMemoryUsage(_dump);
+        _perfcli->readSchedStat(_dump);
     }
 
     inline void Daemon::retrieveLibvirtMetrics(){
