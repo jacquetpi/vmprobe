@@ -1,7 +1,6 @@
 # vmprobe
 
-Expose in a file readable by a vanilla prometheus node_exporter the specified performance counters
-Also add data exposed by libvirt and by some procfs (such as sched_wait_time)
+Expose in a file readable by a vanilla prometheus node_exporter the specified performance counters. Also add data exposed by libvirt and by some procfs (such as sched_wait_time)
 
 ## Requirements
 

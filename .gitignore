@@ -3,6 +3,9 @@
 .vscode/
 build/
 
+# custom
+deploy.sh
+
 # Prerequisites
 *.d
 
