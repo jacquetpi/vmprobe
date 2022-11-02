@@ -1,13 +1,10 @@
 # VMProbe
-prefix=test
+prefix=example
 delay=5000
 endpoint=/var/lib/node_exporter/textfile_collector/vms.prom
 url=qemu:///system
-perfhardware=PERF_COUNT_HW_INSTRUCTIONS,PERF_COUNT_HW_CPU_CYCLES,PERF_COUNT_HW_BRANCH_MISSES,PERF_COUNT_HW_BRANCH_INSTRUCTIONS,PERF_COUNT_HW_CACHE_MISSES,PERF_COUNT_HW_CACHE_REFERENCES
-perfsoftware=PERF_COUNT_SW_CONTEXT_SWITCHES,PERF_COUNT_SW_PAGE_FAULTS
+perfhardware=PERF_COUNT_HW_INSTRUCTIONS,PERF_COUNT_HW_CPU_CYCLES
+perfsoftware=PERF_COUNT_SW_PAGE_FAULTS
 perfhardwarecache=
-# ids are kernel dependant, find them with cat /sys/kernel/debug/tracing/events/*/*/id 
-perftracepoint=313,314
-#326,325,322,323,324,317,303,305,319
-#311,315,312,316,304,313,307,308,320
-#306,309,310,302,301,318,314,300,321
+# ids are kernel dependant, find them with # grep '' /sys/kernel/debug/tracing/events/*/*/id 
+perftracepoint=

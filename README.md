@@ -1,10 +1,10 @@
 # vmprobe
 
-Expose in a file readable by a vanilla prometheus node_exporter the specified performance counters for the current node and its KVM VMs. Also add data exposed by libvirt and by some procfs (such as sched_wait_time)
+Expose in a file readable by a vanilla prometheus node_exporter the specified performance counters for the current node and all its KVM VMs. Also add data exposed by libvirt and by some procfs (such as sched_wait_time)
 
 ## Requirements
 
-- QEMU/KVM with libvirt
+- QEMU/KVM with standard libvirt packages
 - libvirt-devel :
     - On CentOS :  
         ```bash
@@ -30,13 +30,13 @@ Configuration should be written in config.yaml file with the following data:
 - perfhardwarecache : hardwarecache counters to be registered
 - perftracepoint : tracepoint counters to be registered (*)
 
-(*) : Will expose counters for each VM AND the host (reset after each "read session", you only get values corresponding to specified delay)
+(*) : Will expose counters for each VM AND the host (reset after each "read session", you only get values corresponding to specified delta)
 
 ## Miscellaneous
 
 - cgroup v1 only for now (todo : cgroup v2)
 - domain name must be unique
-- be careful with high number of VM as we may open a lot of file descriptors on each core (todo : multiplexing)
+- be careful with high number of counters and VM as we may open a lot of file descriptors on each core (todo : multiplexing)
 - output format is for now
     ```bash
     [prefix]_[global|domain]_[{if domain : domain_name}]_[probe|cpu|memory|perf|sched]_[metric]
@@ -97,7 +97,7 @@ Configuration should be written in config.yaml file with the following data:
 
 A list of tracepoint ids can be specified but they are kernel dependents. You can list them for your configuration with:
 ```bash
-cat /sys/kernel/debug/tracing/events/*/*/id
+(root) grep '' /sys/kernel/debug/tracing/events/*/*/id
 ```
 
 ## Quickstart
