@@ -1,4 +1,5 @@
 #include "libvirtcli.hpp"
+#include "perfcli.hpp"
 #include <libvirt/libvirt.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -61,6 +62,7 @@ namespace server {
 
     void LibvirtClient::addDomainMemoryMetrics(Dump* dump, virDomainPtr dom) {    
         std::string name = virDomainGetName (dom);
+        findAndReplaceAll(name, "-", "");
         virDomainMemoryStatPtr minfo =  (virDomainMemoryStatPtr) calloc(VIR_DOMAIN_MEMORY_STAT_NR, sizeof(*minfo));
         if (minfo == NULL) {
             utils::logging::error ("LibvirtClient::addDomainMemoryMetrics failed (failed calloc):", this-> _uri, name);
@@ -148,6 +150,7 @@ namespace server {
 
     void LibvirtClient::addDomainCPUMetrics(Dump* dump, virDomainPtr dom) {
         std::string name = virDomainGetName (dom);
+        findAndReplaceAll(name, "-", "");
         dump->addSpecificMetric(name, "cpu_alloc", virDomainGetMaxVcpus(dom));
         int nparams = virDomainGetCPUStats(dom, NULL, 0, -1, 1, 0);
         if (nparams <= 0) {
@@ -223,6 +226,7 @@ namespace server {
         next = records;
         while (*next) {
             std::string name = virDomainGetName((*next)->dom);
+            findAndReplaceAll(name, "-", "");
             for (int i = 0; i < (*next)->nparams; i++) {
                 if((*next)->params[i].type != VIR_TYPED_PARAM_ULLONG){
                     utils::logging::error ("LibvirtClient::addDomainPerfInfo failed (type error):", this-> _uri, (*next)->params[i].field);

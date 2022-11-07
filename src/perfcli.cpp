@@ -117,7 +117,7 @@ namespace server {
                         size_t found_scope = vmname_start_at_name.find_last_of('.');
                         if (found_scope != std::string::npos) // remove .scope
                             vmname_start_at_name.erase(found_scope);
-                        findAndReplaceAll(vmname_start_at_name, "\\x2d", "-");
+                        findAndReplaceAll(vmname_start_at_name, "\\x2d", "");
                         vmCgroups[vmname_start_at_name] = node->fts_path;
                     }
                 } // else : not a VM, probably a podman container
