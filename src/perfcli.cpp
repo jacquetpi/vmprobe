@@ -10,6 +10,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <algorithm>
 
 // Use cgroup v1 as v2 doesn't support perf_event yet
 #define DEFAULT_CGROUP_VM_BASEPATH "/sys/fs/cgroup/perf_event/machine.slice/"
@@ -59,7 +60,7 @@ namespace server {
         std::list<std::string> toBeDeleted;
         for(auto x : cgroups)
             if (_fdVMCounters.find(x.first) == _fdVMCounters.end()){ // New key
-                utils::logging::info("New VM detected ", x.first, "with cgroup", x.second);
+                utils::logging::info("New VM detected", x.first, "with cgroup", x.second);
                 perfInitVM(x.first, x.second);
             }
         // Check if a VM disappeared
@@ -106,13 +107,19 @@ namespace server {
             */
             if (node->fts_info == FTS_D && node->fts_statp->st_nlink == 2) {
                 std::string vmname(node->fts_path);
-                size_t found = vmname.find_last_of('\\');
-                if (found != std::string::npos) {
-                    vmname.erase(0,found+4); // format is /sys/fs/cgroup/perf_event/machine.slice/machine-qemu\x2d2\x2dbaseline.scope
-                    found = vmname.find_last_of('.');
-                    if (found != std::string::npos) // remove .scope
-                        vmname.erase(found);
-                    vmCgroups[vmname] = node->fts_path;
+                size_t found_first = vmname.find("\\x2d");
+                // format is /sys/fs/cgroup/perf_event/machine.slice/machine-qemu\x2d{id}\x2d{name which may contains \x2d}.scope
+                if (found_first != std::string::npos) {
+                    std::string vmname_start_at_id = vmname.substr(found_first+4);
+                    size_t found_second = vmname_start_at_id.find("\\x2d");
+                    if (found_second != std::string::npos) {
+                        std::string vmname_start_at_name = vmname_start_at_id.substr(found_second+4);
+                        size_t found_scope = vmname_start_at_name.find_last_of('.');
+                        if (found_scope != std::string::npos) // remove .scope
+                            vmname_start_at_name.erase(found_scope);
+                        findAndReplaceAll(vmname_start_at_name, "\\x2d", "-");
+                        vmCgroups[vmname_start_at_name] = node->fts_path;
+                    }
                 } // else : not a VM, probably a podman container
             }
         }
