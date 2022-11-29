@@ -90,6 +90,8 @@ namespace server {
 
 		void perfSetCounters(std::unordered_map<std::string ,std::vector<int> >* fdMap, int pid, int flag);
 
+		std::vector<std::string> readLine(std::string line, size_t* size);
+
 		std::unordered_map<std::string, std::string> retrieveCgroupsVM();
 
 		public: 
@@ -115,9 +117,12 @@ namespace server {
 
 		void readNodeSchedStat(Dump* dump);
 
-		void readVmSchedStatSpecific(Dump* dump, std::string vmname, std::string vmcgroupfs);
+		void readVmStatSpecific(Dump* dump, std::string vmname, std::string vmcgroupfs);
 
 		void readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime);
+
+		void readStatLine(std::string stat, unsigned long* minflt, unsigned long* cminflt, unsigned long* majflt, 
+                                unsigned long* cmajflt, unsigned long* vsize, unsigned long* rss, unsigned long* rsslim);
 
 		const long long readCPUFrequency();
 

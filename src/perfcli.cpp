@@ -246,7 +246,7 @@ namespace server {
 
     void PerfClient::readVmSchedStat(Dump* dump){
         for(auto x : _fdVMCounters)
-            readVmSchedStatSpecific(dump, x.first, std::get<1>(_fdVmCgroup[x.first]));
+            readVmStatSpecific(dump, x.first, std::get<1>(_fdVmCgroup[x.first]));
     }
 
     void PerfClient::readNodeSchedStat(Dump* dump){
@@ -261,45 +261,87 @@ namespace server {
         dump->addGlobalMetric("sched_waittime", waittime);
     }
 
-    void PerfClient::readVmSchedStatSpecific(Dump* dump, std::string vmname, std::string vmCgroupFs){
+    void PerfClient::readVmStatSpecific(Dump* dump, std::string vmname, std::string vmCgroupFs){
         std::ifstream cgroupfile (vmCgroupFs + "/cgroup.procs");
         std::string strpid;
+        // Metrics to be retrieved
         unsigned long long runtime = 0;
         unsigned long long waittime = 0;
+        unsigned long minflt = 0;
+        unsigned long cminflt = 0;
+        unsigned long majflt = 0;
+        unsigned long cmajflt = 0;
+        unsigned long vsize= 0;
+        unsigned long rss = 0;
+        unsigned long rsslim = 0;
         std::string schedstatline;
+        std::string statline;
+        // Iterate through pids of a given VM and sum its poi
         while (std::getline(cgroupfile, strpid)){
-            std::ifstream  schedstat ("/proc/" + strpid + "/schedstat");
+            std::ifstream stat("/proc/" + strpid + "/stat");
+            if(std::getline(stat, statline)){
+                readStatLine(statline, &minflt, &cminflt, &majflt, &cmajflt, &vsize, &rss, &rsslim);
+            }
+            stat.close();
+            std::ifstream schedstat("/proc/" + strpid + "/schedstat");
             if(std::getline(schedstat, schedstatline)){
                 readSchedStatLine(schedstatline, &runtime, &waittime);
             }
             schedstat.close();
         }
         cgroupfile.close();
+        dump->addSpecificMetric(vmname, "stat_minflt", minflt);
+        dump->addSpecificMetric(vmname, "stat_cminflt", cminflt);
+        dump->addSpecificMetric(vmname, "stat_majflt", majflt);
+        dump->addSpecificMetric(vmname, "stat_cmajflt", cmajflt);
+        dump->addSpecificMetric(vmname, "stat_vsize", vsize); // in bytes
+        dump->addSpecificMetric(vmname, "stat_rss", rss); // in pages
+        dump->addSpecificMetric(vmname, "stat_rsslim", rsslim); // in bytes
         dump->addSpecificMetric(vmname, "sched_runtime", runtime);
         dump->addSpecificMetric(vmname, "sched_waittime", waittime);
     }
 
     void PerfClient::readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime){
-        //format is "... <timerun> <timewait> <timslicesrun>"
-        std::size_t foundts = schedstatline.find_last_of(" ");
-        long long waittimefound = 0;
-        long long runttimefound = 0;
-        if(foundts != std::string::npos){
-            std::string linewithoutts = schedstatline.substr(0,foundts);
-            std::size_t foundtw = linewithoutts.find_last_of(" ");
-            if(foundtw != std::string::npos){
-                waittimefound = std::stol(linewithoutts.substr(foundtw+1));
-                std::string linewithoutwt = linewithoutts.substr(0,foundtw);
-                std::size_t foundtr = linewithoutwt.find_last_of(" ");
-                if(foundtr != std::string::npos)
-                    runttimefound = std::stol(linewithoutwt.substr(foundtr+1));
-                else
-                    runttimefound = std::stol(linewithoutwt); 
-            }
+        size_t size;
+        std::vector<std::string> datasched = readLine(schedstatline, &size);
+        if(size<3){
+            utils::logging::warn("Unexpected schedstat format encountered : ", schedstatline);
+            return;
         }
-        //utils::logging::info("debug3", schedstatline, ":", runttimefound, waittimefound);
-        *runtime+=runttimefound;
-        *waittime+=waittimefound;
+        //format is "[...] <timerun> <timewait> <timslicesrun>"
+        *runtime+=std::stoul(datasched[size-2].c_str());
+        *waittime+=std::stoul(datasched[size-1].c_str());
+    }
+
+    void PerfClient::readStatLine(std::string stat, unsigned long* minflt, unsigned long* cminflt, unsigned long* majflt, 
+                                unsigned long* cmajflt, unsigned long* vsize, unsigned long* rss, unsigned long* rsslim){
+        size_t size;
+        std::vector<std::string> datastat = readLine(stat, &size);
+        if(size<20){
+            utils::logging::warn("Unexpected schedstat format encountered : ", stat);
+            return;
+        }
+        //From /proc/[pid]/stat : https://man7.org/linux/man-pages/man5/proc.5.html
+        *minflt+= std::stoul(datastat[10-1].c_str());
+        *cminflt+= std::stoul(datastat[11-1].c_str());
+        *majflt+= std::stoul(datastat[12-1].c_str());
+        *cmajflt+= std::stoul(datastat[13-1].c_str());
+        *vsize+= std::stoul(datastat[23-1].c_str());
+        *rss+= std::stoul(datastat[24-1].c_str()); // reported as inaccurate
+        *rsslim+= std::stoul(datastat[25-1].c_str());
+    }
+
+    // Return a procfs file in an array format
+    std::vector<std::string> PerfClient::readLine(std::string statline, size_t* size){
+        *size = std::count(statline.begin(), statline.end(), ' ')+1;
+        std::vector<std::string> arr(*size);
+        int i = 0;
+        std::stringstream ssin(statline);
+        while (ssin.good() && i < *size){
+            ssin >> arr[i];
+            ++i;
+        }
+        return arr;
     }
 
     const long long PerfClient::readCPUFrequency () {
