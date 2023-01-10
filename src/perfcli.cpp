@@ -254,11 +254,13 @@ namespace server {
         std::string schedstatline;
         unsigned long long runtime = 0;
         unsigned long long waittime = 0;
+        unsigned long long timeslices = 0;
         while (std::getline(schedstat, schedstatline))
             if (schedstatline.rfind("cpu", 0) == 0) // filter lines
-                readSchedStatLine(schedstatline, &runtime, &waittime);
+                readSchedStatLine(schedstatline, &runtime, &waittime, &timeslices);
         dump->addGlobalMetric("sched_runtime", runtime);
         dump->addGlobalMetric("sched_waittime", waittime);
+        dump->addGlobalMetric("sched_timeslices", timeslices);
     }
 
     void PerfClient::readVmStatSpecific(Dump* dump, std::string vmname, std::string vmCgroupFs){
@@ -267,6 +269,7 @@ namespace server {
         // Metrics to be retrieved
         unsigned long long runtime = 0;
         unsigned long long waittime = 0;
+        unsigned long long timeslices = 0;
         unsigned long minflt = 0;
         unsigned long cminflt = 0;
         unsigned long majflt = 0;
@@ -285,7 +288,7 @@ namespace server {
             stat.close();
             std::ifstream schedstat("/proc/" + strpid + "/schedstat");
             if(std::getline(schedstat, schedstatline)){
-                readSchedStatLine(schedstatline, &runtime, &waittime);
+                readSchedStatLine(schedstatline, &runtime, &waittime, &timeslices);
             }
             schedstat.close();
         }
@@ -299,9 +302,10 @@ namespace server {
         dump->addSpecificMetric(vmname, "stat_rsslim", rsslim); // in bytes
         dump->addSpecificMetric(vmname, "sched_runtime", runtime);
         dump->addSpecificMetric(vmname, "sched_waittime", waittime);
+        dump->addSpecificMetric(vmname, "sched_timeslices", timeslices);
     }
 
-    void PerfClient::readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime){
+    void PerfClient::readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime, unsigned long long* timeslices){
         size_t size;
         std::vector<std::string> datasched = readLine(schedstatline, &size);
         if(size<3){
@@ -309,8 +313,9 @@ namespace server {
             return;
         }
         //format is "[...] <timerun> <timewait> <timslicesrun>"
-        *runtime+=std::stoul(datasched[size-2].c_str());
-        *waittime+=std::stoul(datasched[size-1].c_str());
+        *runtime+=std::stoul(datasched[size-3].c_str());
+        *waittime+=std::stoul(datasched[size-2].c_str());
+        *timeslices+=std::stoul(datasched[size-1].c_str());
     }
 
     void PerfClient::readStatLine(std::string stat, unsigned long* minflt, unsigned long* cminflt, unsigned long* majflt, 

@@ -119,7 +119,7 @@ namespace server {
 
 		void readVmStatSpecific(Dump* dump, std::string vmname, std::string vmcgroupfs);
 
-		void readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime);
+		void readSchedStatLine(std::string schedstatline, unsigned long long* runtime, unsigned long long* waittime, unsigned long long* timeslices);
 
 		void readStatLine(std::string stat, unsigned long* minflt, unsigned long* cminflt, unsigned long* majflt, 
                                 unsigned long* cmajflt, unsigned long* vsize, unsigned long* rss, unsigned long* rsslim);
