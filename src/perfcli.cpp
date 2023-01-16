@@ -123,6 +123,7 @@ namespace server {
                 } // else : not a VM, probably a podman container
             }
         }
+        fts_close(file_system);
         return vmCgroups;
     }
 
