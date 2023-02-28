@@ -100,9 +100,11 @@ A list of tracepoint ids can be specified but they are kernel dependents. You ca
 (root) grep '' /sys/kernel/debug/tracing/events/*/*/id
 ```
 
-## Quickstart
+## How to compile
 
 ```bash
-./compil.sh
-sudo ./vmprobe
+mkdir .build
+cd .build
+cmake ..
+make
 ```
