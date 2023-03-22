@@ -108,3 +108,15 @@ cd .build
 cmake ..
 make
 ```
+
+## How to setup with exporter
+
+Data will be written on a prometheus like format to the file specified by `endpoint` in `config.yaml` (default to `/var/lib/node_exporter/textfile_collector/vms.prom`).  
+Using the default location, we provide a script to launch a prometheus exporter in `misc/nodexporter.sh`.  
+If the default location is changed, the script should be adapted.
+Once probe and exporter are launched, metrics can be seen on `http://localhost:9100/metrics`
+
+```bash
+misc/nodexporter.sh
+sudo ./vmprobe
+```
