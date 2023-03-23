@@ -112,9 +112,10 @@ make
 ## How to setup with exporter
 
 Data will be written on a prometheus like format to the file specified by `endpoint` in `config.yaml` (default to `/var/lib/node_exporter/textfile_collector/vms.prom`).  
+Prometheus exporter should be configured to parse this file location.  
 Using the default location, we provide a script to launch a prometheus exporter in `misc/nodexporter.sh`.  
 If the default location is changed, the script should be adapted.  
-Once probe and exporter are launched, metrics can be seen on `http://localhost:9100/metrics`  
+Once probe and exporter are well configured and launched, metrics should be visible on a web brower by visiting `http://localhost:9100/metrics`  
 
 ```bash
 misc/nodexporter.sh
